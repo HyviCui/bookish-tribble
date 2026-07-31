@@ -1,0 +1,3644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>检查系统 - 层级导航</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+        }
+
+        .app-container {
+            max-width: 850px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        .breadcrumb-wrapper {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eaedf2;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .crumb-item {
+            display: inline-block;
+            color: #64748b;
+            font-size: 0.95rem;
+            font-weight: 500;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: transparent;
+            white-space: nowrap;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .crumb-item:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+
+        .crumb-item.active {
+            color: #0f172a;
+            font-weight: 600;
+            cursor: default;
+            background: #e2e8f0;
+        }
+
+        .crumb-sep {
+            color: #94a3b8;
+            font-weight: 300;
+            font-size: 0.9rem;
+            margin: 0 0.2rem;
+        }
+
+        .level-header {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.3px;
+            word-break: break-all;
+        }
+
+        .level-header small {
+            font-weight: 400;
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-left: 0.5rem;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+
+        .level-btn {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1rem 0.8rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #1e293b;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            text-align: center;
+            position: relative;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
+        .level-btn:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .level-btn:active {
+            transform: translateY(0px);
+            background: #f1f5f9;
+        }
+
+        .level-btn::after {
+            content: "›";
+            margin-left: 0.5rem;
+            color: #94a3b8;
+            font-weight: 300;
+            font-size: 1.2rem;
+            transition: margin 0.2s;
+            flex-shrink: 0;
+        }
+
+        .level-btn:hover::after {
+            margin-left: 0.8rem;
+            color: #475569;
+        }
+
+        .leaf-container {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            border: 1px dashed #cbd5e1;
+        }
+
+        .leaf-container h3 {
+            margin: 0 0 0.5rem 0;
+            color: #0f172a;
+            font-size: 1.25rem;
+        }
+
+        .leaf-container p {
+            color: #64748b;
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 600px) {
+            .app-container {
+                padding: 1.2rem;
+            }
+            .button-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 0.8rem;
+            }
+            .level-btn {
+                font-size: 0.85rem;
+                padding: 0.8rem 0.6rem;
+                min-height: 50px;
+            }
+            .crumb-item {
+                font-size: 0.8rem;
+                padding: 0.2rem 0.4rem;
+                max-width: 150px;
+            }
+            .level-header {
+                font-size: 1rem;
+            }
+        }
+/* --- 图片弹窗样式 --- */
+.modal {
+    display: none; /* 默认隐藏 */
+    position: fixed;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* 半透明黑底 */
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(2px);
+}
+
+.modal-content {
+    max-width: 90vw;
+    max-height: 90vh;
+    border: 1.5vw solid #ffffff;   /* 白色边框 */
+    border-radius: 6px;         /* 圆角边框 */
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    background: #fff;
+    padding: 4px;
+    object-fit: contain;
+}
+
+/* 关闭按钮 */
+.close-modal {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: #ffffff;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+    line-height: 1;
+}
+.close-modal:hover {
+    color: #f1f5f9;
+    transform: scale(1.1);
+}
+
+/* 点击弹窗外部也可关闭 */
+.modal-close-area {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: -1;
+}
+    </style>
+</head>
+<body>
+
+<div class="app-container" id="app">
+    <div class="breadcrumb-wrapper" id="breadcrumb"></div>
+    <div class="level-header" id="levelHeader">
+        检查系统 <small>选择下方层级</small>
+    </div>
+    <div id="container" class="button-grid"></div>
+</div>
+
+<script>
+    // -------------------------------------------------------------
+    // 严格按照提供的文本构建完整树结构（不增、不减、不改）
+    // -------------------------------------------------------------
+    const treeData ={
+  "name": "←功能检查    疼痛→",
+  "children": [
+    {
+      "name": "本部疼痛加深的原因（最直接的单一原因。若为复合、复杂因素需自行逐一拆解并试验）",
+      "children": [
+        {
+          "name": "症状区按压痛、机械压力致痛或高张力",
+          "children": [
+            {
+              "name": "是（症状区与症状责任一致）",
+              "id": "leaf_001"
+            },
+            {
+              "name": "否（牵涉痛：症状区域不为损伤部。牵涉痛对其责任肌进行检查，非牵涉痛直接检查本部）",
+              "children": [
+                {
+                  "name": "是否为多个区域",
+                  "id": "leaf_002"
+                },
+                {
+                  "name": "是",
+                  "children": [
+                    {
+                      "name": "牵涉痛区域",
+                      "children": [
+                        {
+                          "name": "头颈",
+                          "id": "leaf_003"
+                        },
+                        {
+                          "name": "躯干",
+                          "children": [
+                            {
+                              "name": "胸",
+                              "children": [
+                                {
+                                  "name": "胸中上、胸锁关节",
+                                  "id": "leaf_004"
+                                },
+                                {
+                                  "name": "正中、胸骨柄",
+                                  "id": "leaf_005"
+                                },
+                                {
+                                  "name": "胸外上、锁骨下",
+                                  "id": "leaf_006"
+                                },
+                                {
+                                  "name": "胸外下",
+                                  "id": "leaf_007"
+                                },
+                                {
+                                  "name": "胸中下凹陷、胸骨剑突",
+                                  "id": "leaf_008"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "腹",
+                              "children": [
+                                {
+                                  "name": "腹前上外侧（岔气部位）",
+                                  "id": "leaf_009"
+                                },
+                                {
+                                  "name": "腹外侧",
+                                  "id": "leaf_010"
+                                },
+                                {
+                                  "name": "腹中外侧",
+                                  "id": "leaf_011"
+                                },
+                                {
+                                  "name": "脐上",
+                                  "id": "leaf_012"
+                                },
+                                {
+                                  "name": "腹股沟上部",
+                                  "id": "leaf_013"
+                                },
+                                {
+                                  "name": "腹股沟下部",
+                                  "id": "leaf_014"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "背、腰",
+                              "children": [
+                                {
+                                  "name": "肩部",
+                                  "id": "leaf_015"
+                                },
+                                {
+                                  "name": "肩峰",
+                                  "id": "leaf_016"
+                                },
+                                {
+                                  "name": "两肩胛骨中",
+                                  "id": "leaf_017"
+                                },
+                                {
+                                  "name": "上段脊椎",
+                                  "id": "leaf_018"
+                                },
+                                {
+                                  "name": "中、下段脊椎",
+                                  "id": "leaf_019"
+                                },
+                                {
+                                  "name": "中、下段脊椎两侧",
+                                  "id": "leaf_020"
+                                },
+                                {
+                                  "name": "腋后",
+                                  "id": "leaf_021"
+                                },
+                                {
+                                  "name": "腰正中脊椎",
+                                  "id": "leaf_022"
+                                },
+                                {
+                                  "name": "腰脊椎正中两侧",
+                                  "id": "leaf_023"
+                                },
+                                {
+                                  "name": "腰侧",
+                                  "id": "leaf_024"
+                                },
+                                {
+                                  "name": "腰骶",
+                                  "id": "leaf_025"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "骨盆",
+                              "children": [
+                                {
+                                  "name": "大腿根",
+                                  "id": "leaf_026"
+                                },
+                                {
+                                  "name": "会阴",
+                                  "id": "leaf_027"
+                                },
+                                {
+                                  "name": "肛提",
+                                  "id": "leaf_028"
+                                },
+                                {
+                                  "name": "肛周",
+                                  "id": "leaf_029"
+                                },
+                                {
+                                  "name": "坐骨结节",
+                                  "children": [
+                                    {
+                                      "name": "内",
+                                      "id": "leaf_030"
+                                    },
+                                    {
+                                      "name": "外",
+                                      "id": "leaf_031"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "上肢",
+                          "id": "leaf_032"
+                        },
+                        {
+                          "name": "下肢",
+                          "id": "leaf_033"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "否",
+                  "children": [
+                    {
+                      "name": "牵涉痛区域",
+                      "children": [
+                        {
+                          "name": "头颈",
+                          "id": "leaf_034"
+                        },
+                        {
+                          "name": "躯干",
+                          "id": "leaf_035"
+                        },
+                        {
+                          "name": "上肢",
+                          "id": "leaf_036"
+                        },
+                        {
+                          "name": "下肢",
+                          "id": "leaf_037"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "牵伸、发力致痛",
+          "children": [
+            {
+              "name": "同1（非牵涉痛），症状区与症状责任一致",
+              "id": "leaf_038"
+            }
+          ]
+        },
+        {
+          "name": "关节活动致痛（该部等长时无症状）\n关节活动障碍",
+          "children": [
+            {
+              "name": "头、颈",
+              "id": "leaf_039"
+            },
+            {
+              "name": "脊柱",
+              "id": "leaf_040"
+            },
+            {
+              "name": "上肢",
+              "children": [
+                {
+                  "name": "肩与肩胛",
+                  "children": [
+                    {
+                      "name": "屈",
+                      "id": "leaf_041"
+                    },
+                    {
+                      "name": "伸",
+                      "id": "leaf_042"
+                    },
+                    {
+                      "name": "展",
+                      "id": "leaf_043"
+                    },
+                    {
+                      "name": "收",
+                      "id": "leaf_044"
+                    },
+                    {
+                      "name": "内旋",
+                      "id": "leaf_045"
+                    },
+                    {
+                      "name": "外旋",
+                      "id": "leaf_046"
+                    }
+                  ]
+                },
+                {
+                  "name": "肘",
+                  "id": "leaf_047"
+                },
+                {
+                  "name": "腕",
+                  "id": "leaf_048"
+                },
+                {
+                  "name": "指",
+                  "id": "leaf_049"
+                }
+              ]
+            },
+            {
+              "name": "下肢",
+              "children": [
+                {
+                  "name": "髋与骶髂",
+                  "id": "leaf_050"
+                },
+                {
+                  "name": "膝",
+                  "id": "leaf_051"
+                },
+                {
+                  "name": "踝",
+                  "id": "leaf_052"
+                },
+                {
+                  "name": "足",
+                  "id": "leaf_053"
+                },
+                {
+                  "name": "趾",
+                  "id": "leaf_054"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "感觉障碍（麻刺等）与肌力张力障碍（无力等）",
+          "children": [
+            {
+              "name": "外周神经动力性(脊神经、皮神经常见卡压)",
+              "children": [
+                {
+                  "name": "头颈、上肢及肩带（颈、臂丛神经）\n判断具体节段请结合影像",
+                  "children": [
+                    {
+                      "name": "枕区、后脑勺",
+                      "id": "leaf_055"
+                    },
+                    {
+                      "name": "臂丛神经常见卡压区",
+                      "children": [
+                        {
+                          "name": "脊柱动力性稳定功能组，相应神经根的骨性、纤维通道\n配合X射线检查",
+                          "children": [
+                            {
+                              "name": "侧弯挤压、压颈（及锤击）、引颈试验",
+                              "id": "leaf_056"
+                            },
+                            {
+                              "name": "阳",
+                              "id": "leaf_057"
+                            },
+                            {
+                              "name": "阴",
+                              "id": "leaf_058"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "前、中斜角肌间隙",
+                          "children": [
+                            {
+                              "name": "压力试验",
+                              "id": "leaf_059"
+                            },
+                            {
+                              "name": "阳",
+                              "id": "leaf_060"
+                            },
+                            {
+                              "name": "阴",
+                              "id": "leaf_061"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "锁骨下肌、锁骨下（与第一肋之间），胸廓出口",
+                          "children": [
+                            {
+                              "name": "压力试验",
+                              "id": "leaf_062"
+                            },
+                            {
+                              "name": "阳",
+                              "id": "leaf_063"
+                            },
+                            {
+                              "name": "阴",
+                              "id": "leaf_064"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "胸小肌与胸壁前侧",
+                          "children": [
+                            {
+                              "name": "压力试验",
+                              "id": "leaf_065"
+                            },
+                            {
+                              "name": "阳",
+                              "id": "leaf_066"
+                            },
+                            {
+                              "name": "阴",
+                              "id": "leaf_067"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "臂丛下级分支神经的（必须检查臂丛卡压区）\n症状区域与组织：",
+                      "children": [
+                        {
+                          "name": "症状区域：肩胛骨内缘内及肩胛骨深面（菱形肌区域及肩胛骨区域）\n肌力迟缓：肩胛提肌、菱形肌",
+                          "children": [
+                            {
+                              "name": "受累神经：肩胛背神经",
+                              "id": "leaf_068"
+                            },
+                            {
+                              "name": "感觉检查",
+                              "id": "leaf_069"
+                            },
+                            {
+                              "name": "肌力检查",
+                              "id": "leaf_070"
+                            },
+                            {
+                              "name": "责任组织与部位：中斜角肌",
+                              "children": [
+                                {
+                                  "name": "判断",
+                                  "id": "leaf_071"
+                                },
+                                {
+                                  "name": "压力试验",
+                                  "id": "leaf_072"
+                                },
+                                {
+                                  "name": "阳",
+                                  "id": "leaf_073"
+                                },
+                                {
+                                  "name": "阴",
+                                  "id": "leaf_074"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "症状区域：胸外侧、胁肋\n肌力迟缓：前锯肌",
+                          "children": [
+                            {
+                              "name": "受累神经：胸长神经",
+                              "id": "leaf_075"
+                            },
+                            {
+                              "name": "感觉检查",
+                              "id": "leaf_076"
+                            },
+                            {
+                              "name": "肌力检查",
+                              "id": "leaf_077"
+                            },
+                            {
+                              "name": "责任组织与部位：前、中斜角肌间隙，锁骨下肌、锁骨下",
+                              "id": "leaf_078"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "症状区域：肩外侧、肩前、肩后\n肌力迟缓：三角肌",
+                          "children": [
+                            {
+                              "name": "受累神经：腋神经",
+                              "id": "leaf_079"
+                            },
+                            {
+                              "name": "感觉检查",
+                              "id": "leaf_080"
+                            },
+                            {
+                              "name": "肌力检查",
+                              "id": "leaf_081"
+                            },
+                            {
+                              "name": "责任组织与部位：大圆肌、小圆肌、肱三头肌长头，四边孔",
+                              "id": "leaf_082"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "症状区域：肩胛冈上下区\n肌力迟缓：冈上肌、冈下肌",
+                          "children": [
+                            {
+                              "name": "受累神经：肩胛上神经",
+                              "id": "leaf_083"
+                            },
+                            {
+                              "name": "感觉检查",
+                              "id": "leaf_084"
+                            },
+                            {
+                              "name": "肌力检查",
+                              "id": "leaf_085"
+                            },
+                            {
+                              "name": "责任组织与部位：冈上肌、肩胛横韧带",
+                              "id": "leaf_086"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "症状区域：小指与无名指半侧、小鱼际、掌背内侧\n肌力迟缓：小指和无名指屈肌",
+                          "children": [
+                            {
+                              "name": "受累神经：尺神经",
+                              "id": "leaf_087"
+                            },
+                            {
+                              "name": "感觉检查",
+                              "id": "leaf_088"
+                            },
+                            {
+                              "name": "肌力检查",
+                              "id": "leaf_089"
+                            },
+                            {
+                              "name": "责任组织与部位：\n1、尺侧腕屈肌、腕与指屈肌，肘管（尺神经沟）\n2、腕尺管、屈肌腱鞘",
+                              "id": "leaf_090"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "手背外侧（拇指侧）、前臂背侧\n肌力迟缓：腕与指伸肌",
+                          "children": [
+                            {
+                              "name": "受累神经：桡神经",
+                              "id": "leaf_091"
+                            },
+                            {
+                              "name": "感觉检查",
+                              "id": "leaf_092"
+                            },
+                            {
+                              "name": "肌力检查",
+                              "id": "leaf_093"
+                            },
+                            {
+                              "name": "责任组织与部位：\n1、肱三头肌外侧头、肱二头肌，桡神经管\n2、旋后肌，旋后肌腱弓\n3、肱二头肌腱、肱桡肌，桡管",
+                              "id": "leaf_094"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "肘窝、大鱼际、第123指和第4指外半部的腹侧和背侧\n肌力迟缓：指屈肌、拇收肌及拇屈肌",
+                          "children": [
+                            {
+                              "name": "受累神经：正中神经",
+                              "id": "leaf_095"
+                            },
+                            {
+                              "name": "感觉检查",
+                              "id": "leaf_096"
+                            },
+                            {
+                              "name": "肌力检查",
+                              "id": "leaf_097"
+                            },
+                            {
+                              "name": "责任组织与部位：\n1、指浅屈肌弓、旋前圆肌腱\n2、指屈肌，腕管、屈肌腱鞘",
+                              "id": "leaf_098"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "腰、骶丛神经（骨盆、下肢）\n判断具体节段请结合影像",
+                  "children": [
+                    {
+                      "name": "腰、骶神经根（下肢任何区域的症状均需检查此处）",
+                      "id": "leaf_099"
+                    },
+                    {
+                      "name": "大腿前、外、后侧",
+                      "id": "leaf_100"
+                    },
+                    {
+                      "name": "大腿前、内侧，小腿和足内侧\n肌力迟缓：股四头肌、缝匠肌、腰大肌、",
+                      "children": [
+                        {
+                          "name": "受累神经：股神经及其分支隐神经",
+                          "id": "leaf_101"
+                        },
+                        {
+                          "name": "感觉检查",
+                          "id": "leaf_102"
+                        },
+                        {
+                          "name": "肌力检查",
+                          "id": "leaf_103"
+                        },
+                        {
+                          "name": "责任组织与部位：\n1、腰大肌，腹股沟后间隙-肌腔隙\n2、大收肌，大腿内侧肌间隔",
+                          "id": "leaf_104"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "阔筋膜张肌、臀中肌、臀小肌",
+                      "children": [
+                        {
+                          "name": "受累神经：臀上神经",
+                          "id": "leaf_105"
+                        },
+                        {
+                          "name": "感觉检查",
+                          "id": "leaf_106"
+                        },
+                        {
+                          "name": "肌力检查",
+                          "id": "leaf_107"
+                        },
+                        {
+                          "name": "责任组织与部位：梨状肌，坐骨大孔",
+                          "id": "leaf_108"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "臀大肌",
+                      "children": [
+                        {
+                          "name": "受累神经：臀下神经",
+                          "id": "leaf_109"
+                        },
+                        {
+                          "name": "感觉检查",
+                          "id": "leaf_110"
+                        },
+                        {
+                          "name": "肌力检查",
+                          "id": "leaf_111"
+                        },
+                        {
+                          "name": "责任组织与部位：梨状肌，坐骨大孔",
+                          "children": [
+                            {
+                              "name": "判断",
+                              "id": "leaf_112"
+                            },
+                            {
+                              "name": "压力试验",
+                              "id": "leaf_113"
+                            },
+                            {
+                              "name": "阳",
+                              "id": "leaf_114"
+                            },
+                            {
+                              "name": "阴",
+                              "id": "leaf_115"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "坐骨神经及其分支\n（小腿后侧、足跟、足底\n足外侧、小腿前外侧、足背）",
+                      "children": [
+                        {
+                          "name": "坐骨神经（坐骨神经分支均需检查此处）",
+                          "children": [
+                            {
+                              "name": "受累神经：坐骨神经",
+                              "id": "leaf_116"
+                            },
+                            {
+                              "name": "常规检查\n直腿抬高（及加强）、屈颈、鞠躬试验",
+                              "id": "leaf_117"
+                            },
+                            {
+                              "name": "感觉检查",
+                              "id": "leaf_118"
+                            },
+                            {
+                              "name": "肌力检查",
+                              "id": "leaf_119"
+                            },
+                            {
+                              "name": "责任组织与部位：\n1、梨状肌，坐骨大孔\n2、股后肌，股后肌肌间",
+                              "children": [
+                                {
+                                  "name": "1判断",
+                                  "id": "leaf_120"
+                                },
+                                {
+                                  "name": "1试验\n强作用力施压\n梨状肌牵拉试验",
+                                  "id": "leaf_121"
+                                },
+                                {
+                                  "name": "1阳",
+                                  "id": "leaf_122"
+                                },
+                                {
+                                  "name": "1阴",
+                                  "id": "leaf_123"
+                                },
+                                {
+                                  "name": "2判断",
+                                  "id": "leaf_124"
+                                },
+                                {
+                                  "name": "1试验\n强作用力施压",
+                                  "id": "leaf_125"
+                                },
+                                {
+                                  "name": "2阳",
+                                  "id": "leaf_126"
+                                },
+                                {
+                                  "name": "2阴",
+                                  "id": "leaf_127"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "小腿后侧、足跟、足底、足外侧\n肌力迟缓：腓肠肌、比目鱼肌、胫骨后肌、拇屈肌、趾屈肌、足底方肌",
+                          "children": [
+                            {
+                              "name": "受累神经：胫神经",
+                              "id": "leaf_128"
+                            },
+                            {
+                              "name": "感觉检查",
+                              "id": "leaf_129"
+                            },
+                            {
+                              "name": "肌力检查",
+                              "id": "leaf_130"
+                            },
+                            {
+                              "name": "责任组织与部位：\n1、胫骨后肌，后侧深肌间隔筋膜\n2、趾长屈肌、拇长屈肌、屈肌支持带，踝管",
+                              "id": "leaf_131"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "小腿前外侧、足背\n肌力迟缓：胫骨前肌、腓骨肌、拇伸肌、趾伸肌",
+                          "children": [
+                            {
+                              "name": "受累神经：腓总神经",
+                              "id": "leaf_132"
+                            },
+                            {
+                              "name": "感觉检查",
+                              "id": "leaf_133"
+                            },
+                            {
+                              "name": "肌力检查",
+                              "id": "leaf_134"
+                            },
+                            {
+                              "name": "责任组织与部位：\n1、比目鱼肌，小腿后肌间隔筋膜、腓神经近端出口\n2、腓骨长肌，小腿外筋膜室\n3、（腓深神经）神经胫骨前肌，小腿前肌间隔、小腿前筋膜室",
+                              "children": [
+                                {
+                                  "name": "1判断",
+                                  "id": "leaf_135"
+                                },
+                                {
+                                  "name": "1压力试验",
+                                  "id": "leaf_136"
+                                },
+                                {
+                                  "name": "1阳",
+                                  "id": "leaf_137"
+                                },
+                                {
+                                  "name": "1阴",
+                                  "id": "leaf_138"
+                                },
+                                {
+                                  "name": "2判断",
+                                  "id": "leaf_139"
+                                },
+                                {
+                                  "name": "2压力试验",
+                                  "id": "leaf_140"
+                                },
+                                {
+                                  "name": "2阳",
+                                  "id": "leaf_141"
+                                },
+                                {
+                                  "name": "2阴",
+                                  "id": "leaf_142"
+                                },
+                                {
+                                  "name": "3判断",
+                                  "id": "leaf_143"
+                                },
+                                {
+                                  "name": "3压力试验",
+                                  "id": "leaf_144"
+                                },
+                                {
+                                  "name": "3阳",
+                                  "id": "leaf_145"
+                                },
+                                {
+                                  "name": "3阴",
+                                  "id": "leaf_146"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "肋间神经",
+              "children": [],
+              "id": "leaf_147"
+            },
+            {
+              "name": "脑神经",
+              "children": [
+                {
+                  "name": "嗅",
+                  "id": "leaf_148"
+                },
+                {
+                  "name": "视",
+                  "children": [
+                    {
+                      "name": "四象限视野",
+                      "id": "leaf_149"
+                    }
+                  ]
+                },
+                {
+                  "name": "动眼",
+                  "id": "leaf_150"
+                },
+                {
+                  "name": "滑车",
+                  "id": "leaf_151"
+                },
+                {
+                  "name": "三叉",
+                  "id": "leaf_152"
+                },
+                {
+                  "name": "外展",
+                  "id": "leaf_153"
+                },
+                {
+                  "name": "面",
+                  "id": "leaf_154"
+                },
+                {
+                  "name": "位听",
+                  "children": [
+                    {
+                      "name": "听",
+                      "children": [
+                        {
+                          "name": "rinne与韦伯试验（传导性与神经性）",
+                          "id": "leaf_155"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "前庭",
+                      "children": [
+                        {
+                          "name": "平衡试验，眼震快慢相与方向",
+                          "id": "leaf_156"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "舌咽",
+                  "id": "leaf_157"
+                },
+                {
+                  "name": "迷走",
+                  "children": [
+                    {
+                      "name": "悬雍垂偏移试验",
+                      "id": "leaf_158"
+                    }
+                  ]
+                },
+                {
+                  "name": "副",
+                  "children": [
+                    {
+                      "name": "胸锁乳突肌、斜方肌抗阻试验",
+                      "id": "leaf_159"
+                    }
+                  ]
+                },
+                {
+                  "name": "舌下",
+                  "id": "leaf_160"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "责任肌判断（记录项目1）",
+          "children": [
+            {
+              "name": "头颈",
+              "children": [
+                {
+                  "name": "斜方肌",
+                  "id": "leaf_161"
+                },
+                {
+                  "name": "胸锁乳突肌",
+                  "id": "leaf_162"
+                },
+                {
+                  "name": "枕额肌",
+                  "id": "leaf_163"
+                },
+                {
+                  "name": "浅咬肌",
+                  "id": "leaf_164"
+                },
+                {
+                  "name": "颞肌",
+                  "id": "leaf_165"
+                },
+                {
+                  "name": "枕下肌",
+                  "id": "leaf_166"
+                },
+                {
+                  "name": "头夹肌",
+                  "id": "leaf_167"
+                },
+                {
+                  "name": "颈夹肌",
+                  "id": "leaf_168"
+                },
+                {
+                  "name": "肩胛提肌",
+                  "id": "leaf_169"
+                },
+                {
+                  "name": "斜角肌",
+                  "id": "leaf_170"
+                },
+                {
+                  "name": "颈阔肌",
+                  "id": "leaf_171"
+                },
+                {
+                  "name": "最长肌、髂肋肌、半棘肌",
+                  "id": "leaf_172"
+                },
+                {
+                  "name": "多裂肌",
+                  "id": "leaf_173"
+                },
+                {
+                  "name": "项韧带",
+                  "id": "leaf_174"
+                }
+              ]
+            },
+            {
+              "name": "躯干",
+              "children": [
+                {
+                  "name": "胸大肌",
+                  "id": "leaf_175"
+                },
+                {
+                  "name": "胸小肌",
+                  "id": "leaf_176"
+                },
+                {
+                  "name": "腹肌",
+                  "id": "leaf_177"
+                },
+                {
+                  "name": "肋间肌",
+                  "id": "leaf_178"
+                },
+                {
+                  "name": "背阔肌",
+                  "id": "leaf_179"
+                },
+                {
+                  "name": "菱形肌",
+                  "id": "leaf_180"
+                },
+                {
+                  "name": "前锯肌",
+                  "id": "leaf_181"
+                },
+                {
+                  "name": "上锯肌、下锯肌",
+                  "id": "leaf_182"
+                },
+                {
+                  "name": "竖脊肌",
+                  "id": "leaf_183"
+                },
+                {
+                  "name": "多裂肌",
+                  "id": "leaf_184"
+                },
+                {
+                  "name": "腰方肌",
+                  "id": "leaf_185"
+                },
+                {
+                  "name": "腰大肌",
+                  "id": "leaf_186"
+                },
+                {
+                  "name": "膈肌",
+                  "id": "leaf_187"
+                },
+                {
+                  "name": "横突间肌",
+                  "id": "leaf_188"
+                },
+                {
+                  "name": "棘上韧带",
+                  "id": "leaf_189"
+                },
+                {
+                  "name": "盆底肌",
+                  "id": "leaf_190"
+                }
+              ]
+            },
+            {
+              "name": "上肢",
+              "id": "leaf_191"
+            },
+            {
+              "name": "下肢",
+              "id": "leaf_192"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "常见的关节、上神经元病损检查",
+      "children": [
+        {
+          "name": "关节",
+          "id": "leaf_193"
+        },
+        {
+          "name": "脊柱",
+          "children": [
+            {
+              "name": "屈曲旋颈试验",
+              "id": "leaf_194"
+            },
+            {
+              "name": "托马斯试验",
+              "id": "leaf_195"
+            },
+            {
+              "name": "主、被动侧弯试验",
+              "id": "leaf_196"
+            },
+            {
+              "name": "腰椎切力（spring）试验",
+              "id": "leaf_197"
+            }
+          ]
+        },
+        {
+          "name": "上肢",
+          "children": [
+            {
+              "name": "肩",
+              "children": [
+                {
+                  "name": "杜加斯征",
+                  "id": "leaf_198"
+                },
+                {
+                  "name": "clunk试验",
+                  "id": "leaf_199"
+                },
+                {
+                  "name": "jerk试验",
+                  "id": "leaf_200"
+                },
+                {
+                  "name": "O'Brien 试验",
+                  "id": "leaf_201"
+                }
+              ]
+            },
+            {
+              "name": "腕",
+              "children": [
+                {
+                  "name": "尺骨滑移试验",
+                  "id": "leaf_202"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "下肢",
+          "children": [
+            {
+              "name": "骨盆、髋",
+              "children": [
+                {
+                  "name": "骶髂、耻联合",
+                  "children": [
+                    {
+                      "name": "4字、骨盆挤压、床边试验、单腿坠足试验、躯干旋转试验",
+                      "id": "leaf_203"
+                    },
+                    {
+                      "name": "骨盆分离试验、4字试验",
+                      "id": "leaf_204"
+                    }
+                  ]
+                },
+                {
+                  "name": "髋",
+                  "children": [
+                    {
+                      "name": "股骨长度对照检查（需先规避骨盆旋移，且配合X射线检查）",
+                      "id": "leaf_205"
+                    },
+                    {
+                      "name": "4字试验",
+                      "id": "leaf_206"
+                    },
+                    {
+                      "name": "托马斯试验",
+                      "id": "leaf_207"
+                    },
+                    {
+                      "name": "髋前、后撞击试验",
+                      "id": "leaf_208"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "膝",
+              "children": [
+                {
+                  "name": "浮髌试验",
+                  "id": "leaf_209"
+                },
+                {
+                  "name": "挺髌（及分离）试验、股髌研磨试验",
+                  "id": "leaf_210"
+                },
+                {
+                  "name": "半月板研磨、挤压试验",
+                  "id": "leaf_211"
+                },
+                {
+                  "name": "抽屉试验",
+                  "id": "leaf_212"
+                },
+                {
+                  "name": "内翻、外翻应力试验",
+                  "id": "leaf_213"
+                },
+                {
+                  "name": "膝过伸髌垫压迫试验",
+                  "id": "leaf_214"
+                }
+              ]
+            },
+            {
+              "name": "踝、足",
+              "children": [
+                {
+                  "name": "三角韧带前抽屉试验",
+                  "id": "leaf_215"
+                },
+                {
+                  "name": "跟腱小腿肌压迫实验（汤普森试验）",
+                  "id": "leaf_216"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "上运动神经元",
+          "children": [
+            {
+              "name": "霍夫曼征",
+              "id": "leaf_217"
+            },
+            {
+              "name": "膝反射试验",
+              "id": "leaf_218"
+            },
+            {
+              "name": "踝阵挛试验",
+              "id": "leaf_219"
+            },
+            {
+              "name": "Babinski征",
+              "id": "leaf_220"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "功能组内、间功能转移、代偿判断分析（谁帮谁？谁害谁？）",
+      "children": [
+        {
+          "name": "稳定性",
+          "children": [
+            {
+              "name": "头颈",
+              "children": [
+                {
+                  "name": "区域检查",
+                  "id": "leaf_221"
+                },
+                {
+                  "name": "判断",
+                  "id": "leaf_222"
+                },
+                {
+                  "name": "激惹法",
+                  "children": [
+                    {
+                      "name": "侧向、旋转、前后位移应力试验",
+                      "id": "leaf_223"
+                    }
+                  ]
+                },
+                {
+                  "name": "促进法",
+                  "children": [
+                    {
+                      "name": "拉力稳定",
+                      "children": [
+                        {
+                          "name": "",
+                          "id": "leaf_224"
+                        },
+                        {
+                          "name": "",
+                          "id": "leaf_225"
+                        },
+                        {
+                          "name": "",
+                          "id": "leaf_226"
+                        },
+                        {
+                          "name": "",
+                          "id": "leaf_227"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "膜稳定与环稳定",
+                      "children": [
+                        {
+                          "name": "颈托试验",
+                          "id": "leaf_228"
+                        },
+                        {
+                          "name": "闭颌旋转屈伸对照试验",
+                          "id": "leaf_229"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "躯干",
+              "children": [
+                {
+                  "name": "区域检查",
+                  "children": [
+                    {
+                      "name": "静态",
+                      "children": [
+                        {
+                          "name": "坐姿、站姿提膝对照试验",
+                          "id": "leaf_230"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "动态",
+                      "children": [
+                        {
+                          "name": "支撑试验",
+                          "id": "leaf_231"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "胸廓",
+                  "children": [
+                    {
+                      "name": "判断",
+                      "id": "leaf_232"
+                    },
+                    {
+                      "name": "激惹法",
+                      "children": [
+                        {
+                          "name": "",
+                          "id": "leaf_233"
+                        },
+                        {
+                          "name": "",
+                          "id": "leaf_234"
+                        },
+                        {
+                          "name": "",
+                          "id": "leaf_235"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "促进法",
+                      "children": [
+                        {
+                          "name": "拉力稳定",
+                          "id": "leaf_236"
+                        },
+                        {
+                          "name": "膜稳定与环稳定",
+                          "id": "leaf_237"
+                        },
+                        {
+                          "name": "灌注加压稳定（巫毒带）",
+                          "id": "leaf_238"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "腰段",
+                  "children": [
+                    {
+                      "name": "判断",
+                      "id": "leaf_239"
+                    },
+                    {
+                      "name": "激惹法",
+                      "children": [
+                        {
+                          "name": "腰椎切力（spring）试验",
+                          "id": "leaf_240"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "促进法",
+                      "children": [
+                        {
+                          "name": "拉力稳定",
+                          "id": "leaf_241"
+                        },
+                        {
+                          "name": "膜稳定与环稳定",
+                          "id": "leaf_242"
+                        },
+                        {
+                          "name": "灌注加压稳定",
+                          "id": "leaf_243"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "骨盆",
+                  "children": [
+                    {
+                      "name": "判断",
+                      "id": "leaf_244"
+                    },
+                    {
+                      "name": "激惹法",
+                      "id": "leaf_245"
+                    },
+                    {
+                      "name": "促进法",
+                      "children": [
+                        {
+                          "name": "拉力稳定",
+                          "id": "leaf_246"
+                        },
+                        {
+                          "name": "膜稳定与环稳定",
+                          "id": "leaf_247"
+                        },
+                        {
+                          "name": "灌注加压稳定",
+                          "id": "leaf_248"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "上肢",
+              "children": [
+                {
+                  "name": "区域检查",
+                  "children": [
+                    {
+                      "name": "静态",
+                      "children": [
+                        {
+                          "name": "俯撑试验（肩胛带）、支撑试验",
+                          "id": "leaf_249"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "动态",
+                      "children": [
+                        {
+                          "name": "俯卧撑试验",
+                          "id": "leaf_250"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "肩胛骨",
+                  "children": [
+                    {
+                      "name": "判断",
+                      "id": "leaf_251"
+                    },
+                    {
+                      "name": "激惹法",
+                      "children": [
+                        {
+                          "name": "肩屈（或推背）试验",
+                          "id": "leaf_252"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "促进法",
+                      "children": [
+                        {
+                          "name": "拉力稳定",
+                          "id": "leaf_253"
+                        },
+                        {
+                          "name": "膜稳定与环稳定",
+                          "id": "leaf_254"
+                        },
+                        {
+                          "name": "灌注加压稳定",
+                          "id": "leaf_255"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "大臂",
+                  "children": [
+                    {
+                      "name": "判断",
+                      "id": "leaf_256"
+                    },
+                    {
+                      "name": "激惹法",
+                      "id": "leaf_257"
+                    },
+                    {
+                      "name": "促进法",
+                      "children": [
+                        {
+                          "name": "拉力稳定",
+                          "id": "leaf_258"
+                        },
+                        {
+                          "name": "膜稳定与环稳定",
+                          "id": "leaf_259"
+                        },
+                        {
+                          "name": "灌注加压稳定",
+                          "id": "leaf_260"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "前臂",
+                  "children": [
+                    {
+                      "name": "判断",
+                      "id": "leaf_261"
+                    },
+                    {
+                      "name": "激惹法",
+                      "id": "leaf_262"
+                    },
+                    {
+                      "name": "促进法",
+                      "children": [
+                        {
+                          "name": "拉力稳定",
+                          "id": "leaf_263"
+                        },
+                        {
+                          "name": "膜稳定与环稳定",
+                          "id": "leaf_264"
+                        },
+                        {
+                          "name": "灌注加压稳定",
+                          "id": "leaf_265"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "手腕",
+                  "children": [
+                    {
+                      "name": "判断",
+                      "id": "leaf_266"
+                    },
+                    {
+                      "name": "激惹法",
+                      "id": "leaf_267"
+                    },
+                    {
+                      "name": "促进法",
+                      "children": [
+                        {
+                          "name": "拉力稳定",
+                          "id": "leaf_268"
+                        },
+                        {
+                          "name": "膜稳定与环稳定",
+                          "id": "leaf_269"
+                        },
+                        {
+                          "name": "灌注加压稳定",
+                          "id": "leaf_270"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "下肢",
+              "children": [
+                {
+                  "name": "区域检查",
+                  "children": [
+                    {
+                      "name": "静态",
+                      "children": [
+                        {
+                          "name": "帐篷（栽葱）对照试验",
+                          "id": "leaf_271"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "动态",
+                      "children": [
+                        {
+                          "name": "栽葱深蹲、单腿蹲对照试验",
+                          "id": "leaf_272"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "骨盆",
+                  "children": [
+                    {
+                      "name": "判断",
+                      "id": "leaf_273"
+                    },
+                    {
+                      "name": "激惹法",
+                      "id": "leaf_274"
+                    },
+                    {
+                      "name": "促进法",
+                      "children": [
+                        {
+                          "name": "拉力稳定",
+                          "id": "leaf_275"
+                        },
+                        {
+                          "name": "膜稳定与环稳定",
+                          "id": "leaf_276"
+                        },
+                        {
+                          "name": "灌注加压稳定",
+                          "id": "leaf_277"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "大腿",
+                  "children": [
+                    {
+                      "name": "判断",
+                      "id": "leaf_278"
+                    },
+                    {
+                      "name": "激惹法",
+                      "id": "leaf_279"
+                    },
+                    {
+                      "name": "促进法",
+                      "children": [
+                        {
+                          "name": "拉力稳定",
+                          "id": "leaf_280"
+                        },
+                        {
+                          "name": "膜稳定与环稳定",
+                          "id": "leaf_281"
+                        },
+                        {
+                          "name": "灌注加压稳定",
+                          "id": "leaf_282"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "小腿",
+                  "children": [
+                    {
+                      "name": "判断",
+                      "id": "leaf_283"
+                    },
+                    {
+                      "name": "激惹法",
+                      "id": "leaf_284"
+                    },
+                    {
+                      "name": "促进法",
+                      "children": [
+                        {
+                          "name": "拉力稳定",
+                          "id": "leaf_285"
+                        },
+                        {
+                          "name": "膜稳定与环稳定",
+                          "id": "leaf_286"
+                        },
+                        {
+                          "name": "灌注加压稳定",
+                          "id": "leaf_287"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "足",
+                  "children": [
+                    {
+                      "name": "判断",
+                      "id": "leaf_288"
+                    },
+                    {
+                      "name": "激惹法",
+                      "id": "leaf_289"
+                    },
+                    {
+                      "name": "促进法",
+                      "children": [
+                        {
+                          "name": "拉力稳定",
+                          "id": "leaf_290"
+                        },
+                        {
+                          "name": "膜稳定与环稳定",
+                          "id": "leaf_291"
+                        },
+                        {
+                          "name": "灌注加压稳定",
+                          "id": "leaf_292"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "活动性约束",
+          "children": [
+            {
+              "name": "头颈",
+              "id": "leaf_293"
+            },
+            {
+              "name": "躯干",
+              "id": "leaf_294"
+            },
+            {
+              "name": "上肢",
+              "id": "leaf_295"
+            },
+            {
+              "name": "下肢",
+              "id": "leaf_296"
+            }
+          ]
+        },
+        {
+          "name": "动力系统",
+          "children": [
+            {
+              "name": "头颈",
+              "id": "leaf_297"
+            },
+            {
+              "name": "躯干",
+              "id": "leaf_298"
+            },
+            {
+              "name": "上肢",
+              "id": "leaf_299"
+            },
+            {
+              "name": "下肢",
+              "id": "leaf_300"
+            }
+          ]
+        },
+        {
+          "name": "缓冲",
+          "children": [
+            {
+              "name": "脊柱",
+              "id": "leaf_301"
+            },
+            {
+              "name": "上肢",
+              "id": "leaf_302"
+            },
+            {
+              "name": "下肢",
+              "id": "leaf_303"
+            }
+          ]
+        },
+        {
+          "name": "氧容（内、外呼吸系统）",
+          "children": [
+            {
+              "name": "外呼吸\n呼吸通道、呼吸动力",
+              "id": "leaf_304"
+            },
+            {
+              "name": "内呼吸（未上线）",
+              "children": [
+                {
+                  "name": "氧交换、氧运输、细胞呼吸等",
+                  "id": "leaf_305"
+                },
+                {
+                  "name": "散热",
+                  "id": "leaf_306"
+                },
+                {
+                  "name": "",
+                  "id": "leaf_307"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "姿势（静力系统）",
+          "children": [
+            {
+              "name": "整体静止点还原技术",
+              "children": [
+                {
+                  "name": "冠状轴",
+                  "children": [
+                    {
+                      "name": "头",
+                      "children": [
+                        {
+                          "name": "前",
+                          "id": "leaf_308"
+                        },
+                        {
+                          "name": "后",
+                          "id": "leaf_309"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "胸廓",
+                      "children": [
+                        {
+                          "name": "前（肋弓角减小）",
+                          "id": "leaf_310"
+                        },
+                        {
+                          "name": "后（肋弓角增加）",
+                          "id": "leaf_311"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "骨盆",
+                      "children": [
+                        {
+                          "name": "骨盆后倾",
+                          "id": "leaf_312"
+                        },
+                        {
+                          "name": "骨盆前倾",
+                          "id": "leaf_313"
+                        },
+                        {
+                          "name": "骶骨前倾（点头）",
+                          "children": [
+                            {
+                              "name": "检查",
+                              "children": [
+                                {
+                                  "name": "X射线检查为主（腰骶倾角）",
+                                  "id": "leaf_314"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "静止点还原试验",
+                              "children": [
+                                {
+                                  "name": "卷滚动试验",
+                                  "id": "leaf_315"
+                                },
+                                {
+                                  "name": "骶尖垂压试验",
+                                  "id": "leaf_316"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "骶骨后倾（反点头）",
+                          "children": [
+                            {
+                              "name": "检查",
+                              "children": [
+                                {
+                                  "name": "髂骨后伸内及外旋试验",
+                                  "id": "leaf_317"
+                                },
+                                {
+                                  "name": "俯卧髋伸试验",
+                                  "id": "leaf_318"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "静止点还原试验",
+                              "children": [
+                                {
+                                  "name": "俯卧足跟压臀试验",
+                                  "id": "leaf_319"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "膝",
+                      "children": [
+                        {
+                          "name": "大腿",
+                          "children": [
+                            {
+                              "name": "前（大腿前则小腿前）",
+                              "id": "leaf_320"
+                            },
+                            {
+                              "name": "后（大腿后则小腿后）",
+                              "id": "leaf_321"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "小腿",
+                          "children": [
+                            {
+                              "name": "前（大腿前则小腿前）",
+                              "id": "leaf_322"
+                            },
+                            {
+                              "name": "后（大腿后则小腿后）",
+                              "id": "leaf_323"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "矢状轴",
+                  "children": [
+                    {
+                      "name": "多区域或整体在矢状轴的倾斜是在垂直轴上级联发展的，故除单一部位外，均检测垂直轴。",
+                      "id": "leaf_324"
+                    },
+                    {
+                      "name": "踝",
+                      "children": [
+                        {
+                          "name": "检查",
+                          "children": [],
+                          "id": "leaf_325"
+                        },
+                        {
+                          "name": "左侧向左，外翻 （一般按左右区分）",
+                          "children": [
+                            {
+                              "name": "足跟偏转试验",
+                              "id": "leaf_326"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "左侧向右，内翻",
+                          "children": [
+                            {
+                              "name": "足跟偏转试验",
+                              "id": "leaf_327"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "右侧向左，外翻",
+                          "children": [
+                            {
+                              "name": "足跟偏转试验",
+                              "id": "leaf_328"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "右侧向右，内翻",
+                          "children": [
+                            {
+                              "name": "足跟偏转试验",
+                              "id": "leaf_329"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "垂直轴",
+                  "children": [
+                    {
+                      "name": "头",
+                      "children": [
+                        {
+                          "name": "检查",
+                          "id": "leaf_330"
+                        },
+                        {
+                          "name": "前后轴偏转\n转颈试验",
+                          "id": "leaf_331"
+                        },
+                        {
+                          "name": "判断",
+                          "id": "leaf_332"
+                        },
+                        {
+                          "name": "左转",
+                          "children": [
+                            {
+                              "name": "静止点还原试验",
+                              "children": [
+                                {
+                                  "name": "阳",
+                                  "children": [
+                                    {
+                                      "name": "高张肌检查",
+                                      "id": "leaf_333"
+                                    },
+                                    {
+                                      "name": "组间转移判断",
+                                      "id": "leaf_334"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "阴",
+                                  "children": [
+                                    {
+                                      "name": "其它静力系统区域",
+                                      "id": "leaf_335"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "右转",
+                          "children": [
+                            {
+                              "name": "静止点还原试验",
+                              "children": [
+                                {
+                                  "name": "阳",
+                                  "children": [
+                                    {
+                                      "name": "高张肌检查",
+                                      "id": "leaf_336"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "阴",
+                                  "id": "leaf_337"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "肩胛带",
+                      "children": [
+                        {
+                          "name": "检查",
+                          "id": "leaf_338"
+                        },
+                        {
+                          "name": "肩胛骨各标记夹角：冈-水平角、内缘-垂直角",
+                          "id": "leaf_339"
+                        },
+                        {
+                          "name": "判断",
+                          "id": "leaf_340"
+                        },
+                        {
+                          "name": "左侧左转（后缩）",
+                          "children": [
+                            {
+                              "name": "静止点还原试验",
+                              "children": [
+                                {
+                                  "name": "阳",
+                                  "children": [
+                                    {
+                                      "name": "高张肌检查",
+                                      "id": "leaf_341"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "阴",
+                                  "id": "leaf_342"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "左侧右转（前引）",
+                          "children": [
+                            {
+                              "name": "静止点还原试验",
+                              "children": [
+                                {
+                                  "name": "阳",
+                                  "children": [
+                                    {
+                                      "name": "高张肌检查",
+                                      "id": "leaf_343"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "阴",
+                                  "id": "leaf_344"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "右侧左转（前引）",
+                          "children": [
+                            {
+                              "name": "静止点还原试验",
+                              "children": [
+                                {
+                                  "name": "阳",
+                                  "children": [
+                                    {
+                                      "name": "高张肌检查",
+                                      "id": "leaf_345"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "阴",
+                                  "id": "leaf_346"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "右侧右转（后缩）",
+                          "children": [
+                            {
+                              "name": "静止点还原试验",
+                              "children": [
+                                {
+                                  "name": "阳",
+                                  "children": [
+                                    {
+                                      "name": "高张肌检查",
+                                      "id": "leaf_347"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "阴",
+                                  "id": "leaf_348"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "胸廓",
+                      "children": [
+                        {
+                          "name": "检查",
+                          "id": "leaf_349"
+                        },
+                        {
+                          "name": "中线肋弓角",
+                          "id": "leaf_350"
+                        },
+                        {
+                          "name": "判断",
+                          "id": "leaf_351"
+                        },
+                        {
+                          "name": "左转（左扩张或、且右减小）",
+                          "children": [
+                            {
+                              "name": "静止点还原试验",
+                              "children": [
+                                {
+                                  "name": "阳",
+                                  "children": [
+                                    {
+                                      "name": "高张肌检查",
+                                      "id": "leaf_352"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "阴",
+                                  "id": "leaf_353"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "右转（反之）",
+                          "children": [
+                            {
+                              "name": "静止点还原试验",
+                              "children": [
+                                {
+                                  "name": "阳",
+                                  "children": [
+                                    {
+                                      "name": "高张肌检查",
+                                      "id": "leaf_354"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "阴",
+                                  "id": "leaf_355"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "腰段",
+                      "children": [
+                        {
+                          "name": "检查",
+                          "id": "leaf_356"
+                        },
+                        {
+                          "name": "骨盆锚定旋转",
+                          "id": "leaf_357"
+                        },
+                        {
+                          "name": "左转",
+                          "children": [
+                            {
+                              "name": "静止点还原试验（腰椎垂压试验）",
+                              "children": [
+                                {
+                                  "name": "阳",
+                                  "children": [
+                                    {
+                                      "name": "高张肌检查",
+                                      "id": "leaf_358"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "阴",
+                                  "id": "leaf_359"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "右转",
+                          "children": [
+                            {
+                              "name": "静止点还原试验（腰椎垂压试验）",
+                              "children": [
+                                {
+                                  "name": "阳",
+                                  "children": [
+                                    {
+                                      "name": "高张肌检查",
+                                      "id": "leaf_360"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "阴",
+                                  "id": "leaf_361"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "骨盆",
+                      "children": [
+                        {
+                          "name": "整体",
+                          "children": [
+                            {
+                              "name": "左转（左髂旋前并右髂旋后）",
+                              "children": [
+                                {
+                                  "name": "左髂旋前",
+                                  "children": [
+                                    {
+                                      "name": "ober征",
+                                      "id": "leaf_362"
+                                    },
+                                    {
+                                      "name": "仰卧屈髋试验（观察腰曲）",
+                                      "id": "leaf_363"
+                                    },
+                                    {
+                                      "name": "站立屈髋试验",
+                                      "id": "leaf_364"
+                                    },
+                                    {
+                                      "name": "站立体前屈试验",
+                                      "id": "leaf_365"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "右髂旋后",
+                                  "children": [
+                                    {
+                                      "name": "站立伸髋试验",
+                                      "id": "leaf_366"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "name": "右转（左髂旋后并右髂旋前）",
+                              "children": [
+                                {
+                                  "name": "左髂旋后",
+                                  "children": [
+                                    {
+                                      "name": "站立伸髋试验",
+                                      "id": "leaf_367"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "右髂旋前",
+                                  "children": [
+                                    {
+                                      "name": "ober征",
+                                      "id": "leaf_368"
+                                    },
+                                    {
+                                      "name": "仰卧屈髋试验（观察腰曲）",
+                                      "id": "leaf_369"
+                                    },
+                                    {
+                                      "name": "站立屈髋试验",
+                                      "id": "leaf_370"
+                                    },
+                                    {
+                                      "name": "站立体前屈试验",
+                                      "id": "leaf_371"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "髂",
+                          "children": [
+                            {
+                              "name": "左髂旋前且或右髂旋后及\n左髂旋后且或右髂旋前\n（两侧同时检查，后需进行单侧检查）",
+                              "children": [
+                                {
+                                  "name": "检查",
+                                  "children": [
+                                    {
+                                      "name": "仰卧-长坐下肢长度检查（排除结构性长度差异）",
+                                      "id": "leaf_372"
+                                    },
+                                    {
+                                      "name": "俯卧下肢长度检查（排除结构性长度差异）",
+                                      "id": "leaf_373"
+                                    },
+                                    {
+                                      "name": "站立及坐位体前屈试验",
+                                      "id": "leaf_374"
+                                    },
+                                    {
+                                      "name": "站立屈髋试验",
+                                      "id": "leaf_375"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "静止点还原试验",
+                                  "children": [
+                                    {
+                                      "name": "",
+                                      "id": "leaf_376"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "name": "左髂旋前",
+                              "children": [
+                                {
+                                  "name": "检查",
+                                  "children": [
+                                    {
+                                      "name": "ober征",
+                                      "id": "leaf_377"
+                                    },
+                                    {
+                                      "name": "站立体前屈试验",
+                                      "id": "leaf_378"
+                                    },
+                                    {
+                                      "name": "站立屈髋试验",
+                                      "id": "leaf_379"
+                                    },
+                                    {
+                                      "name": "仰卧屈髋试验（观察腰曲）",
+                                      "id": "leaf_380"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "静止点还原试验",
+                                  "id": "leaf_381"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "左髂旋后",
+                              "children": [
+                                {
+                                  "name": "检查",
+                                  "id": "leaf_382"
+                                },
+                                {
+                                  "name": "站立伸髋试验",
+                                  "id": "leaf_383"
+                                },
+                                {
+                                  "name": "静止点还原试验",
+                                  "id": "leaf_384"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "右髂旋前",
+                              "children": [
+                                {
+                                  "name": "检查",
+                                  "children": [
+                                    {
+                                      "name": "ober征",
+                                      "id": "leaf_385"
+                                    },
+                                    {
+                                      "name": "站立体前屈试验",
+                                      "id": "leaf_386"
+                                    },
+                                    {
+                                      "name": "站立屈髋试验",
+                                      "id": "leaf_387"
+                                    },
+                                    {
+                                      "name": "仰卧屈髋试验（观察腰曲）",
+                                      "id": "leaf_388"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "静止点还原试验",
+                                  "id": "leaf_389"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "右髂旋后",
+                              "children": [
+                                {
+                                  "name": "检查",
+                                  "id": "leaf_390"
+                                },
+                                {
+                                  "name": "站立伸髋试验",
+                                  "id": "leaf_391"
+                                },
+                                {
+                                  "name": "静止点还原试验",
+                                  "id": "leaf_392"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "骶",
+                          "children": [
+                            {
+                              "name": "左转",
+                              "children": [
+                                {
+                                  "name": "左左转（右下左上轴，后倾）",
+                                  "children": [
+                                    {
+                                      "name": "坐位体前屈试验（左腰皮肤相对牵拉）",
+                                      "id": "leaf_393"
+                                    },
+                                    {
+                                      "name": "腰段旋转试验（右旋限制）",
+                                      "id": "leaf_394"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "左右转（左下右上轴，前倾）",
+                                  "children": [
+                                    {
+                                      "name": "坐位体前屈试验（左腰皮肤相对牵拉）",
+                                      "id": "leaf_395"
+                                    },
+                                    {
+                                      "name": "腰段旋转试验（右旋限制）",
+                                      "id": "leaf_396"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "name": "右转",
+                              "children": [
+                                {
+                                  "name": "右右转（左下右上轴，后倾）",
+                                  "children": [
+                                    {
+                                      "name": "坐位体前屈试验（右腰皮肤相对牵拉）",
+                                      "id": "leaf_397"
+                                    },
+                                    {
+                                      "name": "腰段旋转试验（左旋受限）",
+                                      "id": "leaf_398"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "右左转（右下左上轴，前倾）",
+                                  "children": [
+                                    {
+                                      "name": "坐位体前屈试验（右腰皮肤相对牵拉）",
+                                      "id": "leaf_399"
+                                    },
+                                    {
+                                      "name": "腰段旋转试验（左旋受限）",
+                                      "id": "leaf_400"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "大腿、小腿、膝",
+                      "children": [
+                        {
+                          "name": "大腿",
+                          "children": [
+                            {
+                              "name": "检查",
+                              "id": "leaf_401"
+                            },
+                            {
+                              "name": "左侧左转（一般按左右区分）",
+                              "id": "leaf_402"
+                            },
+                            {
+                              "name": "左侧右转",
+                              "id": "leaf_403"
+                            },
+                            {
+                              "name": "右侧左转",
+                              "id": "leaf_404"
+                            },
+                            {
+                              "name": "右侧右转",
+                              "id": "leaf_405"
+                            },
+                            {
+                              "name": "左侧左转且右侧左转",
+                              "id": "leaf_406"
+                            },
+                            {
+                              "name": "左侧右转且右侧右转",
+                              "id": "leaf_407"
+                            },
+                            {
+                              "name": "左侧右转且右侧左转或\n左侧左转且右侧右转",
+                              "id": "leaf_408"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "小腿",
+                          "children": [
+                            {
+                              "name": "左侧左转（一般按左右区分）",
+                              "id": "leaf_409"
+                            },
+                            {
+                              "name": "左侧右转",
+                              "id": "leaf_410"
+                            },
+                            {
+                              "name": "右侧左转",
+                              "id": "leaf_411"
+                            },
+                            {
+                              "name": "右侧右转",
+                              "id": "leaf_412"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "踝、足",
+                      "children": [
+                        {
+                          "name": "踝",
+                          "children": [
+                            {
+                              "name": "左侧向左，外翻 （一般按左右区分）",
+                              "children": [
+                                {
+                                  "name": "足跟偏转试验",
+                                  "id": "leaf_413"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "左侧向右，内翻",
+                              "children": [
+                                {
+                                  "name": "足跟偏转试验",
+                                  "id": "leaf_414"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "右侧向左，外翻",
+                              "children": [
+                                {
+                                  "name": "足跟偏转试验",
+                                  "id": "leaf_415"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "右侧向右，内翻",
+                              "children": [
+                                {
+                                  "name": "足跟偏转试验",
+                                  "id": "leaf_416"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "足（跗骨间关节）",
+                          "children": [
+                            {
+                              "name": "左侧左转，姿势性高足（一般按左右区分）",
+                              "children": [
+                                {
+                                  "name": "检查：费司氏线",
+                                  "id": "leaf_417"
+                                },
+                                {
+                                  "name": "判断：足前外阻挡对照试验",
+                                  "id": "leaf_418"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "左侧右转，姿势性低足",
+                              "children": [
+                                {
+                                  "name": "检查：费司氏线",
+                                  "id": "leaf_419"
+                                },
+                                {
+                                  "name": "判断：足前内阻挡对照试验",
+                                  "id": "leaf_420"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "右侧左转，姿势性高足",
+                              "children": [
+                                {
+                                  "name": "检查：费司氏线",
+                                  "id": "leaf_421"
+                                },
+                                {
+                                  "name": "判断：足前内阻挡对照试验",
+                                  "id": "leaf_422"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "右侧右转，姿势性低足",
+                              "children": [
+                                {
+                                  "name": "检查：费司氏线",
+                                  "id": "leaf_423"
+                                },
+                                {
+                                  "name": "判断：足前外阻挡对照试验",
+                                  "id": "leaf_424"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "name": "足（跖趾关节）",
+                          "children": [
+                            {
+                              "name": "拇外翻",
+                              "id": "leaf_425"
+                            },
+                            {
+                              "name": "检查：拇指外翻角",
+                              "id": "leaf_426"
+                            },
+                            {
+                              "name": "判断",
+                              "id": "leaf_427"
+                            },
+                            {
+                              "name": "静力系统",
+                              "id": "leaf_428"
+                            },
+                            {
+                              "name": "",
+                              "id": "leaf_429"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "神经系统",
+              "children": [
+                {
+                  "name": "中枢神经功能性",
+                  "children": [
+                    {
+                      "name": "皮质",
+                      "id": "leaf_430"
+                    },
+                    {
+                      "name": "小脑",
+                      "id": "leaf_431"
+                    },
+                    {
+                      "name": "脑干",
+                      "id": "leaf_432"
+                    },
+                    {
+                      "name": "脊髓",
+                      "id": "leaf_433"
+                    }
+                  ]
+                },
+                {
+                  "name": "感觉与支配",
+                  "children": [
+                    {
+                      "name": "感觉",
+                      "children": [
+                        {
+                          "name": "平衡觉三联",
+                          "id": "leaf_434"
+                        },
+                        {
+                          "name": "视觉",
+                          "id": "leaf_435"
+                        },
+                        {
+                          "name": "听觉",
+                          "id": "leaf_436"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "支配",
+                      "children": [
+                        {
+                          "name": "外周神经动力性障碍(脊神经、皮神经常见卡压)",
+                          "id": "leaf_437"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "致损帧与疼痛帧",
+          "id": "leaf_438"
+        },
+        {
+          "name": "按系统进行推理",
+          "id": "leaf_439"
+        },
+        {
+          "name": "按章节查看",
+          "id": "leaf_440"
+        },
+        {
+          "name": "功能组功能检查（有没有？好不好？）\n独立系统，不与其它检查项目交互，按需检查。\n此独立系统的检查项目及其简易说明在此文件。\n检查结果将自动录入文件。导出后不可修改",
+          "children": [
+            {
+              "name": "稳定性",
+              "children": [
+                {
+                  "name": "头颈",
+                  "children": [
+                    {
+                      "name": "静态",
+                      "children": [
+                        {
+                          "name": "肩展对照试验",
+                          "id": "leaf_441"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "动态",
+                      "children": [
+                        {
+                          "name": "闭颌旋转屈伸对照试验",
+                          "id": "leaf_442"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "躯干",
+                  "children": [
+                    {
+                      "name": "静态",
+                      "children": [
+                        {
+                          "name": "坐姿、站姿提膝对照试验",
+                          "id": "leaf_443"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "动态",
+                      "children": [
+                        {
+                          "name": "支撑试验",
+                          "id": "leaf_444"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "上肢",
+                  "children": [
+                    {
+                      "name": "静态",
+                      "children": [
+                        {
+                          "name": "俯撑试验（肩胛带）、支撑试验",
+                          "id": "leaf_445"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "动态",
+                      "children": [
+                        {
+                          "name": "俯卧撑试验",
+                          "id": "leaf_446"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "下肢",
+                  "children": [
+                    {
+                      "name": "静态",
+                      "children": [
+                        {
+                          "name": "帐篷（栽葱）对照试验",
+                          "id": "leaf_447"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "动态",
+                      "children": [
+                        {
+                          "name": "栽葱深蹲、单腿蹲对照试验",
+                          "id": "leaf_448"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "活动性约束",
+              "children": [
+                {
+                  "name": "关节活动性检查",
+                  "id": "leaf_449"
+                }
+              ]
+            },
+            {
+              "name": "动力系统",
+              "children": [
+                {
+                  "name": "请采用所在领域的肌力测试，本系统不再提供",
+                  "id": "leaf_450"
+                },
+                {
+                  "name": "检查",
+                  "children": [
+                    {
+                      "name": "肌电",
+                      "id": "leaf_451"
+                    }
+                  ]
+                },
+                {
+                  "name": "判断",
+                  "children": [
+                    {
+                      "name": "充分",
+                      "children": [
+                        {
+                          "name": "过负荷抗扰动",
+                          "id": "leaf_452"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "必要",
+                      "children": [
+                        {
+                          "name": "肌贴",
+                          "id": "leaf_453"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "躯干",
+                  "id": "leaf_454"
+                },
+                {
+                  "name": "上肢",
+                  "id": "leaf_455"
+                },
+                {
+                  "name": "下肢",
+                  "id": "leaf_456"
+                }
+              ]
+            },
+            {
+              "name": "缓冲",
+              "children": [
+                {
+                  "name": "脊柱",
+                  "children": [
+                    {
+                      "name": "双足触地（抗伸）",
+                      "id": "leaf_457"
+                    },
+                    {
+                      "name": "原地纵跳、跳深\n测力台",
+                      "id": "leaf_458"
+                    },
+                    {
+                      "name": "四足触地（抗屈、伸与抗压）",
+                      "id": "leaf_459"
+                    },
+                    {
+                      "name": "跪式击掌俯卧撑或俯卧撑落地冲击试验\n测力台",
+                      "id": "leaf_460"
+                    }
+                  ]
+                },
+                {
+                  "name": "上肢",
+                  "children": [
+                    {
+                      "name": "跪式击掌俯卧撑或俯卧撑落地冲击试验",
+                      "id": "leaf_461"
+                    }
+                  ]
+                },
+                {
+                  "name": "下肢",
+                  "children": [
+                    {
+                      "name": "跳深、单腿跳",
+                      "id": "leaf_462"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "氧容（内、外呼吸系统）",
+              "children": [
+                {
+                  "name": "外呼吸\n呼吸通道、呼吸动力",
+                  "id": "leaf_463"
+                },
+                {
+                  "name": "肺功能仪",
+                  "id": "leaf_464"
+                },
+                {
+                  "name": "内呼吸（未上线）\n氧交换、氧运输、细胞呼吸等",
+                  "id": "leaf_465"
+                }
+              ]
+            },
+            {
+              "name": "姿势（静力系统）",
+              "children": [
+                {
+                  "name": "观察(区域静止点和整体静止点）",
+                  "children": [
+                    {
+                      "name": "参见文档",
+                      "id": "leaf_466"
+                    },
+                    {
+                      "name": "正面、背面观",
+                      "id": "leaf_467"
+                    },
+                    {
+                      "name": "侧面观",
+                      "id": "leaf_468"
+                    },
+                    {
+                      "name": "后续将上线拍照自动分析程序，请等待。",
+                      "id": "leaf_469"
+                    }
+                  ]
+                },
+                {
+                  "name": "测量（结合静止点观察）",
+                  "children": [
+                    {
+                      "name": "头、面、颈",
+                      "children": [
+                        {
+                          "name": "下颌",
+                          "children": [
+                            {
+                              "name": "双下颌角",
+                              "id": "leaf_470"
+                            },
+                            {
+                              "name": "咬合纸",
+                              "id": "leaf_471"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "头、颈",
+                          "children": [
+                            {
+                              "name": "静、动态视靶试验",
+                              "id": "leaf_472"
+                            },
+                            {
+                              "name": "转颈试验（侧弯）",
+                              "id": "leaf_473"
+                            },
+                            {
+                              "name": "寰椎六向、颈椎序列（配合X射线检查）",
+                              "id": "leaf_474"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "脊柱",
+                      "children": [
+                        {
+                          "name": "cobb角",
+                          "id": "leaf_475"
+                        },
+                        {
+                          "name": "主、动侧弯对照试验",
+                          "id": "leaf_476"
+                        },
+                        {
+                          "name": "肋弓角",
+                          "id": "leaf_477"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "上肢",
+                      "children": [
+                        {
+                          "name": "肩胛骨",
+                          "children": [
+                            {
+                              "name": "水平夹角",
+                              "id": "leaf_478"
+                            },
+                            {
+                              "name": "垂直夹角",
+                              "id": "leaf_479"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "下肢",
+                      "children": [
+                        {
+                          "name": "髂、骶",
+                          "children": [
+                            {
+                              "name": "骶骨前倾角、骨盆倾角（配合X射线检查）",
+                              "id": "leaf_480"
+                            },
+                            {
+                              "name": "腰、骶三角",
+                              "id": "leaf_481"
+                            },
+                            {
+                              "name": "骨盆出口形态、冈氏十点（需配合X射线检查）",
+                              "id": "leaf_482"
+                            },
+                            {
+                              "name": "髂耻三角",
+                              "id": "leaf_483"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "大腿、小腿",
+                          "children": [
+                            {
+                              "name": "颈股角（配合X射线检查）",
+                              "id": "leaf_484"
+                            },
+                            {
+                              "name": "股骨旋转角",
+                              "id": "leaf_485"
+                            },
+                            {
+                              "name": "Q角",
+                              "id": "leaf_486"
+                            },
+                            {
+                              "name": "胫股角",
+                              "id": "leaf_487"
+                            },
+                            {
+                              "name": "胫骨旋转角",
+                              "id": "leaf_488"
+                            },
+                            {
+                              "name": "胫骨扭转角",
+                              "id": "leaf_489"
+                            }
+                          ]
+                        },
+                        {
+                          "name": "足、踝",
+                          "children": [
+                            {
+                              "name": "跟骨偏转角",
+                              "id": "leaf_490"
+                            },
+                            {
+                              "name": "费司氏线",
+                              "id": "leaf_491"
+                            },
+                            {
+                              "name": "拇指外翻角",
+                              "id": "leaf_492"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "神经系统",
+              "children": [
+                {
+                  "name": "外周神经动力性（位于代偿分析部分）",
+                  "id": "leaf_493"
+                },
+                {
+                  "name": "中枢神经功能性",
+                  "id": "leaf_494"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+};
+
+    // -------------------------------------------------------------
+    // 层级导航逻辑（严格保留界面仅显示当前层级的直接关联项）
+    // -------------------------------------------------------------
+    let currentPath = [treeData]; 
+
+    function render() {
+        const container = document.getElementById('container');
+        const breadcrumbEl = document.getElementById('breadcrumb');
+        const headerEl = document.getElementById('levelHeader');
+
+        const currentNode = currentPath[currentPath.length - 1];
+
+        // 1. 渲染面包屑导航
+        breadcrumbEl.innerHTML = currentPath.map((node, index) => {
+            const isLast = index === currentPath.length - 1;
+            return `<span class="crumb-item ${isLast ? 'active' : ''}" onclick="goToLevel(${index})">${node.name}</span>`;
+        }).join(' <span class="crumb-sep">/</span> ');
+
+        // 2. 渲染层级标题
+        headerEl.innerHTML = `${currentPath[currentPath.length - 1].name} <small>（第 ${currentPath.length} 层级）</small>`;
+
+        // 3. 渲染当前层级按钮
+        container.innerHTML = '';
+        if (!currentNode.children || currentNode.children.length === 0) {
+            // 叶子节点（无后续层级）
+            container.innerHTML = `
+                <div class="leaf-container">
+                    <h3>✅ 当前选项：${currentNode.name}</h3>
+                    <p>已到达最底层，无后续层级。</p>
+                </div>
+            `;
+            return;
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'button-grid';
+        currentNode.children.forEach(child => {
+            const btn = document.createElement('button');
+            btn.className = 'level-btn';
+            btn.innerText = child.name;
+            btn.onclick = () => {
+    // 判断是否有下一级子节点
+    if (child.children && child.children.length > 0) {
+        // 有子层级，正常下钻
+        currentPath.push(child);
+        render();
+    } else {
+        // 是叶子节点（无子层级），检查是否有 id，有则弹图
+        if (child.id) {
+            openImageModal(child.id);
+        } else {
+            // 防止有的叶子没有配图或id，兜底提示
+            currentPath.push(child);
+            render();
+        }
+    }
+};
+            wrapper.appendChild(btn);
+        });
+        container.appendChild(wrapper);
+    }
+
+    function goToLevel(index) {
+        if (index < 0 || index >= currentPath.length) return;
+        currentPath = currentPath.slice(0, index + 1);
+        render();
+    }
+
+    // -------------------------------------------------------------
+    // 启动应用
+    // -------------------------------------------------------------
+    render();
+// --- 弹窗相关函数 ---
+
+// 1. 打开弹窗
+function openImageModal(id) {
+    const modal = document.getElementById('imageModal');
+    const img = document.getElementById('modalImage');
+    
+    // 拼接图片路径：假定您的截图放在 images/ 文件夹下，后缀为 .png
+    // 如果您存的是 jpg，请把下面的 .png 改成 .jpg
+    const basePath = 'images/';
+    let imgSrc = basePath + id + '.png';
+
+    // 加载图片：如果不成功（比如实际是 jpg），会自动尝试加载 jpg
+    img.onerror = function() {
+        // 如果 .png 加载失败，尝试 .jpg
+        this.onerror = null; // 防止死循环
+        this.src = basePath + id + '.jpg';
+    };
+    img.src = imgSrc;
+
+    // 显示弹窗
+    modal.style.display = 'flex';
+}
+
+// 2. 关闭弹窗
+function closeImageModal() {
+    document.getElementById('imageModal').style.display = 'none';
+}
+</script>
+<!-- 图片弹窗 (纯净版，仅靠浏览器缩放) -->
+<div id="imageModal" class="modal" style="display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; backdrop-filter: blur(2px);">
+    <span class="close-modal" onclick="closeImageModal()" style="position: absolute; top: 20px; right: 30px; color: #fff; font-size: 40px; cursor: pointer; z-index: 1000;">&times;</span>
+    <div class="modal-close-area" onclick="closeImageModal()" style="position: absolute; width: 100%; height: 100%; z-index: 1;"></div>
+    
+    <!-- 去掉了边框、白色背景和阴影，仅保留黑色虚化背景 -->
+    <div id="pinch-container" style="width: 90vw; height: 90vh; max-width: 800px; max-height: 800px; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; z-index: 2;">
+        <img id="modalImage" style="width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain;" alt="资料截图">
+    </div>
+</div>
+</body>
+</html>
